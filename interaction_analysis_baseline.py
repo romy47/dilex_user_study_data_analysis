@@ -2,11 +2,11 @@ import pandas as pd
 import dateutil.parser as dp
 
 # Initial FIle Read and Variable Setup ##########################################################################
-json_data = pd.read_json('loglists.json')
-timing = pd.read_csv('user_log_timing.csv')
-logfrequencyProtoS1 = pd.read_csv('log_frequency_proto.csv')
+json_data = pd.read_json('baselineloglists.json')
+timing = pd.read_csv('user_log_timing_baseline.csv')
+logfrequencyProtoS1 = pd.read_csv('log_frequency_baseline.csv')
 logfrequencyProtoS1Unnamed = []
-logfrequencyProtoS2 = pd.read_csv('log_frequency_proto.csv')
+logfrequencyProtoS2 = pd.read_csv('log_frequency_baseline.csv')
 logfrequencyProtoS2Unnamed = []
 
 logfrequencyProtoS1 = logfrequencyProtoS1.drop_duplicates(subset=["Event ID"], keep="first")
@@ -30,9 +30,9 @@ for user in json_data["logs"]:
         log["index"] = index
         index += 1
         if(log.get("eventDetails").get("name") != None):
-            if(log.get("eventDetails").get("name")=="workspace-opened"):
+            if(log.get("eventDetails").get("name")=="myfolder-reached"):
                 currentState = 'Workspace'
-            elif(log.get("eventDetails").get("name") == "dashboard-opened" or log.get("eventDetails").get("name") == "serp-opened" or log.get("eventDetails").get("name") == "task-detail-opened"):
+            elif(log.get("eventDetails").get("name") == "serp-reached"):
                 currentState = 'SERP'
             log["state"] = currentState
 
@@ -44,14 +44,6 @@ for user in json_data["logs"]:
                     log["eventDetails"]["name"] = "get-doc-workspace"
                 if (log.get("eventDetails").get("name") == "doc-view-modal-close-clicked"):
                     log["eventDetails"]["name"] = "doc-view-modal-close-clicked-workspace"
-                if (log.get("eventDetails").get("name") == "doc-view-modal-close-top-clicked"):
-                    log["eventDetails"]["name"] = "doc-view-modal-close-top-clicked-workspace"
-                if (log.get("eventDetails").get("name") == "facet-selected"):
-                    log["eventDetails"]["name"] = "facet-selected-workspace"
-                if (log.get("eventDetails").get("name") == "facet-unselected"):
-                    log["eventDetails"]["name"] = "facet-unselected-workspace"
-                if (log.get("eventDetails").get("name") == "facet-category-changed"):
-                    log["eventDetails"]["name"] = "facet-category-changed-workspace"
 
 finalLogs = []
 ## Log Frequency without wilson's classification
@@ -111,8 +103,8 @@ for user in json_data["logs"]:
                 if str(logs2.get("eventDetails").get("name")) not in logfrequencyProtoS2Unnamed:
                     logfrequencyProtoS2Unnamed.append(str(logs2.get("eventDetails").get("name")))
                     # print("S2 Unmatched "+ str(logs2.get("eventDetails").get("name")))
-logfrequencyProtoS1ByUser.to_csv("logfrequencyProtoS1ByUser.csv", encoding='utf-8', index=False)
-logfrequencyProtoS2ByUser.to_csv("logfrequencyProtoS2ByUser.csv", encoding='utf-8', index=False)
+logfrequencyProtoS1ByUser.to_csv("logfrequencyProtoS1ByUser_baseline.csv", encoding='utf-8', index=False)
+logfrequencyProtoS2ByUser.to_csv("logfrequencyProtoS2ByUser_baseline.csv", encoding='utf-8', index=False)
 
 
 
@@ -208,18 +200,17 @@ for user in json_data["logs"]:
 
             if(len(userLogs["session1Logs"])>0):
                 for logs1 in userLogs["session1Logs"]:
-                    #for debugging
-                    print(str(logs1.get("eventDetails").get("name")) + '-------' + str(dp.parse((logs1.get("timestamps").get("eventTimestamp"))))+ '----' + str(logs1["index"]))
-                    if(logs1.get("eventDetails").get("name") != None and prevS1Event==logs1.get("eventDetails").get("name")):
+                    # for debugging
+                    print(str(logs1.get("eventDetails").get("name")) + '-------' + str(
+                        dp.parse((logs1.get("timestamps").get("eventTimestamp")))) + '----' + str(logs1["index"]))
+                    if (logs1.get("eventDetails").get("name") != None and prevS1Event == logs1.get("eventDetails").get(
+                            "name")):
                         print('>>>>>> ERR 1: Same Event')
-                    if (logs1.get("eventDetails").get("name") != None and ("issued" in logs1.get("eventDetails").get("name")) and
-                        logs1.get("eventDetails").get("submissionValues") == None):
+                    if (logs1.get("eventDetails").get("name") != None and (
+                            "issued" in logs1.get("eventDetails").get("name")) and
+                            logs1.get("eventDetails").get("submissionValues") == None):
                         print('>>>>>> ERR 2: Empty Query')
                     prevS1Event = logs1.get("eventDetails").get("name")
-
-
-
-
 
                     logfrequencyProtoS1Row = logfrequencyProtoS1.loc[logfrequencyProtoS1["Event ID"] == str(logs1.get("eventDetails").get("name"))]
                     wilsonRow = logfrequencyProtoS1ByUser.loc[logfrequencyProtoS1ByUser["userID"] == user["userID"], logfrequencyProtoS1Row["Wilson's Classification"]]
@@ -236,8 +227,10 @@ for user in json_data["logs"]:
                             logfrequencyProtoS1Unnamed.append(str(logs1.get("eventDetails").get("name")))
                             # print("S1 Unmatched " + str(logs1.get("eventDetails").get("name")))
 
-
-
+                    #Timing and State Calculation
+                    # if(user["userID"]=="615e605553c939867a1e4ba2"):
+                    # print("--")
+                    # print(logs1.get("state"))
                     if(logs1.get("state") and logs1.get("state")!=prevS1State):
                         if(logs1.get("state")=="Workspace"):
                             # print('* w -block')
@@ -296,7 +289,7 @@ for user in json_data["logs"]:
                         if str(logs2.get("eventDetails").get("name")) not in logfrequencyProtoS2Unnamed:
                             logfrequencyProtoS2Unnamed.append(str(logs2.get("eventDetails").get("name")))
                             # print("S2 Unmatched "+ str(logs2.get("eventDetails").get("name")))
-                    # print(str(logs2.get("eventDetails").get("name")) + '-------' + str(dp.parse((logs2.get("timestamps").get("eventTimestamp")))) + '----' + str(logs2["index"]))
+                    # print(str(logs2.get("eventDetails").get("name")) + '-------' + str(dp.parse((logs2.get("timestamps").get("eventTimestamp")))))
                     if (logs2.get("state") and logs2.get("state") != prevS2State):
                         if (logs2.get("state") == "Workspace"):
                             # print('* w -block')
@@ -341,11 +334,12 @@ for user in json_data["logs"]:
                 logfrequencyStatesS1ByUser.loc[logfrequencyStatesS1ByUser["userID"] == user["userID"], "totalTime"] = s1TotalTime
                 logfrequencyStatesS2ByUser.loc[logfrequencyStatesS2ByUser["userID"] == user["userID"], "totalTime"] = s2TotalTime
 
-logfrequencyProtoS1ByUser.to_csv("logfrequencyWithWilsonProtoS1ByUser.csv", encoding='utf-8', index=False)
-logfrequencyProtoS2ByUser.to_csv("logfrequencyWithWilsonProtoS2ByUser.csv", encoding='utf-8', index=False)
+logfrequencyProtoS1ByUser.to_csv("logfrequencyWithWilsonProtoS1ByUser_baseline.csv", encoding='utf-8', index=False)
+logfrequencyProtoS2ByUser.to_csv("logfrequencyWithWilsonProtoS2ByUser_baseline.csv", encoding='utf-8', index=False)
 
-logfrequencyStatesS1ByUser.to_csv("logfrequencyStatesS1ByUser.csv", encoding='utf-8', index=False)
-logfrequencyStatesS2ByUser.to_csv("logfrequencyStatesS2ByUser.csv", encoding='utf-8', index=False)
+logfrequencyStatesS1ByUser.to_csv("logfrequencyStatesS1ByUser_baseline.csv", encoding='utf-8', index=False)
+logfrequencyStatesS2ByUser.to_csv("logfrequencyStatesS2ByUser_baseline.csv", encoding='utf-8', index=False)
+
 
 
 
